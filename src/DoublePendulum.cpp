@@ -115,8 +115,13 @@ void DoublePendulum::computeAngularAccelerations(double theta1, double theta2,
     double cartAccel,
     double& alpha1, double& alpha2)
 {
-    // Simplified double pendulum on cart equations
-    // These are approximations - we'll refine in Phase 2 with proper Lagrangian derivation
+    // Lagrangian-derived equations for a double pendulum with a moving support (cart)
+    // Coordinates: theta1, theta2 measured from downward vertical (theta=0 is hanging down)
+    // Using positions:
+    //  x1 = x_cart + L1*sin(theta1), y1 = -L1*cos(theta1)
+    //  x2 = x1 + L2*sin(theta2), y2 = y1 - L2*cos(theta2)
+    // After deriving Euler-Lagrange equations and isolating theta'' terms we obtain
+    // a 2x2 linear system: A * [theta1_dd; theta2_dd] = RHS
 
     const double g = m_gravity;
     const double L1 = m_length1;
@@ -124,22 +129,38 @@ void DoublePendulum::computeAngularAccelerations(double theta1, double theta2,
     const double m1 = m_mass1;
     const double m2 = m_mass2;
 
-    // Angular difference
-    double dtheta = theta2 - theta1;
+    double dtheta = theta1 - theta2; // note sign used in cos/sin below
+    double c = std::cos(dtheta);
+    double s = std::sin(dtheta);
 
-    // Compute angular accelerations (simplified coupled equations)
-    // Include simple viscous damping using m_damping for each pendulum.
+    // Mass-inertia matrix coefficients
+    double A11 = (m1 + m2) * L1;
+    double A12 = m2 * L2 * c;
+    double A21 = m2 * L1 * c;
+    double A22 = m2 * L2;
 
-    // First pendulum
-    double num1 = -g * std::sin(theta1) - cartAccel * std::cos(theta1);
-    num1 += m2 * L2 * omega2 * omega2 * std::sin(dtheta) / (m1 + m2);
-    alpha1 = (num1 - m_damping * omega1) / L1;
+    // Right-hand side (move all non-acceleration terms to RHS)
+    double RHS1 = - (m1 + m2) * g * std::sin(theta1)
+                  - m2 * L2 * omega2 * omega2 * s
+                  - (m1 + m2) * cartAccel * std::cos(theta1)
+                  - m_damping * omega1;
 
-    // Second pendulum (relative to first)
-    double num2 = g * (std::sin(theta1) - std::sin(theta2));
-    num2 += cartAccel * (std::cos(theta1) - std::cos(theta2));
-    num2 -= L1 * omega1 * omega1 * std::sin(dtheta);
-    alpha2 = (num2 - m_damping * omega2) / L2;
+    double RHS2 = m2 * L1 * omega1 * omega1 * s
+                  - m2 * g * std::sin(theta2)
+                  - m2 * cartAccel * std::cos(theta2)
+                  - m_damping * omega2;
+
+    // Solve 2x2 linear system
+    double det = A11 * A22 - A12 * A21;
+    if (std::abs(det) < 1e-12) {
+        // Ill-conditioned; fall back to simple decoupled estimates
+        alpha1 = RHS1 / (A11 > 1e-12 ? A11 : 1.0);
+        alpha2 = RHS2 / (A22 > 1e-12 ? A22 : 1.0);
+        return;
+    }
+
+    alpha1 = (RHS1 * A22 - A12 * RHS2) / det;
+    alpha2 = (A11 * RHS2 - RHS1 * A21) / det;
 }
 
 double DoublePendulum::normalizeAngle(double angle)
@@ -148,4 +169,41 @@ double DoublePendulum::normalizeAngle(double angle)
     while (angle > PI) angle -= 2.0 * PI;
     while (angle < -PI) angle += 2.0 * PI;
     return angle;
+}
+
+double DoublePendulum::getKineticEnergy(double cartVelocity) const
+{
+    // Positions (relative to cart pivot at y=0):
+    // x1 = x_cart + L1*sin(theta1)
+    // y1 = -L1*cos(theta1)
+    // x2 = x1 + L2*sin(theta2)
+    // y2 = y1 - L2*cos(theta2)
+    // Velocities computed by differentiating positions
+
+    double v_cart = cartVelocity;
+    double t1 = m_angle1;
+    double t2 = m_angle2;
+    double w1 = m_angularVelocity1;
+    double w2 = m_angularVelocity2;
+
+    double x1dot = v_cart + m_length1 * std::cos(t1) * w1;
+    double y1dot = m_length1 * std::sin(t1) * w1;
+
+    double x2dot = v_cart + m_length1 * std::cos(t1) * w1 + m_length2 * std::cos(t2) * w2;
+    double y2dot = m_length1 * std::sin(t1) * w1 + m_length2 * std::sin(t2) * w2;
+
+    double ke1 = 0.5 * m_mass1 * (x1dot * x1dot + y1dot * y1dot);
+    double ke2 = 0.5 * m_mass2 * (x2dot * x2dot + y2dot * y2dot);
+
+    return ke1 + ke2;
+}
+
+double DoublePendulum::getPotentialEnergy() const
+{
+    // PE relative to both pendulums hanging down (theta = 0):
+    // m1 * g * L1 * (1 - cos(theta1))
+    // m2 * g * (L1*(1 - cos(theta1)) + L2*(1 - cos(theta2)))
+    double pe1 = m_mass1 * m_gravity * m_length1 * (1.0 - std::cos(m_angle1));
+    double pe2 = m_mass2 * m_gravity * (m_length1 * (1.0 - std::cos(m_angle1)) + m_length2 * (1.0 - std::cos(m_angle2)));
+    return pe1 + pe2;
 }

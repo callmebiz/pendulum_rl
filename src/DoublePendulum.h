@@ -31,6 +31,8 @@ public:
     void setLength(int index, double l) {
         if (index == 0) m_length1 = l; else m_length2 = l;
     }
+    double getKineticEnergy(double cartVelocity) const;
+    double getPotentialEnergy() const;
     
 private:
     double m_mass1, m_mass2;

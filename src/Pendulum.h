@@ -26,6 +26,13 @@ public:
     void setDamping(double d) { m_damping = d; }
     double getDamping() const { return m_damping; }
 
+    // Energy instrumentation: kinetic / potential energy of the pendulum
+    virtual double getKineticEnergy(double cartVelocity) const = 0;
+    virtual double getPotentialEnergy() const = 0;
+
+    // Convenience: total mechanical energy (pendulum only)
+    double getTotalEnergy(double cartVelocity) const { return getKineticEnergy(cartVelocity) + getPotentialEnergy(); }
+
 protected:
     // Physics constants
     double m_gravity = 9.81;  // m/s^2 - can be changed at runtime

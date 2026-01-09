@@ -12,6 +12,9 @@
 
 #include <iostream>
 #include <memory>
+#include <vector>
+#include <algorithm>
+#include <cfloat>
 
 // Window dimensions
 const int WINDOW_WIDTH = 1280;
@@ -101,8 +104,14 @@ int main()
     // ============================================================
     float friction = 0.1f;      // Friction / damping coefficient (UI float)
     float gravity = 9.81f;      // Gravitational acceleration (m/s^2) (UI float)
-    double dt = 1.0 / 60.0;     // Time step (60 Hz)
+    double dt = 1.0 / 144.0;     // Time step (144 Hz)
     double simulationTime = 0.0;
+
+    // Energy instrumentation (history buffer for plotting)
+    const int ENERGY_HISTORY_SIZE = 1440; // e.g. 10s @ 144Hz
+    std::vector<float> energyHistory(ENERGY_HISTORY_SIZE, 0.0f);
+    int energyIndex = 0;
+    int energyCount = 0;
 
     // ============================================================
     // Main Loop
@@ -166,6 +175,19 @@ int main()
         // Update simulation time
         simulationTime += dt;
 
+        // -----------------------------
+        // Energy instrumentation
+        // -----------------------------
+        double cartKE = 0.5 * cart.getMass() * cart.getVelocity() * cart.getVelocity();
+        double pendKE = currentPendulum->getKineticEnergy(cart.getVelocity());
+        double pendPE = currentPendulum->getPotentialEnergy();
+        double totalEnergy = cartKE + pendKE + pendPE;
+
+        // Push into circular buffer
+        energyHistory[energyIndex] = static_cast<float>(totalEnergy);
+        energyIndex = (energyIndex + 1) % ENERGY_HISTORY_SIZE;
+        if (energyCount < ENERGY_HISTORY_SIZE) ++energyCount;
+
         // ========================================================
         // Rendering
         // ========================================================
@@ -194,6 +216,7 @@ int main()
                 ImGui::Text("  Position: %.3f m", cart.getPosition());
                 ImGui::Text("  Velocity: %.3f m/s", cart.getVelocity());
                 ImGui::Text("  Acceleration: %.1f m/s^2", appliedAcceleration);
+                ImGui::Text("  Wrap: %s", cart.isWrapEnabled() ? "ON" : "OFF");
                 ImGui::Separator();
 
                 if (useSinglePendulum) {
@@ -211,6 +234,27 @@ int main()
                     ImGui::Text("Pendulum 2 (blue):");
                     ImGui::Text("  Angle: %.6f deg", angle2 * 180.0 / 3.14159);
                 }
+
+                ImGui::Separator();
+                // Energy display / plot
+                ImGui::Text("Energy (J):");
+                ImGui::Text("  Cart KE: %.6f", cartKE);
+                ImGui::Text("  Pend KE: %.6f", pendKE);
+                ImGui::Text("  Pend PE: %.6f", pendPE);
+                ImGui::Text("  Total : %.6f", totalEnergy);
+
+                // Prepare plot data (ordered oldest->newest)
+                if (energyCount > 0) {
+                    std::vector<float> plotData;
+                    plotData.reserve(energyCount);
+                    int start = (energyIndex + ENERGY_HISTORY_SIZE - energyCount) % ENERGY_HISTORY_SIZE;
+                    for (int i = 0; i < energyCount; ++i) {
+                        plotData.push_back(energyHistory[(start + i) % ENERGY_HISTORY_SIZE]);
+                    }
+                    ImGui::PlotLines("Total Energy", plotData.data(), static_cast<int>(plotData.size()), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 80));
+                }
+
+                // (CSV export removed; plotting only)
 
                 ImGui::Separator();
                 ImGui::Text("Physics Parameters:");
@@ -249,6 +293,11 @@ int main()
                 float railLen = static_cast<float>(cart.getRailLength());
                 if (ImGui::InputFloat("Rail length (m)", &railLen, 0.1f, 1.0f, "%.2f")) {
                     cart.setRailLength(static_cast<double>(railLen));
+                }
+                // Wrap-around toggle
+                bool wrap = cart.isWrapEnabled();
+                if (ImGui::Checkbox("Wrap rail (teleport across edges)", &wrap)) {
+                    cart.setWrapEnabled(wrap);
                 }
                 // Max acceleration tuning (affects input->getCartAcceleration())
                 float maxAcc = static_cast<float>(input.getMaxAcceleration());

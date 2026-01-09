@@ -18,6 +18,8 @@ public:
     double getAngularVelocity(int index) const override;
     double getMass() const { return m_mass; }
     double getLength() const { return m_length; }
+    double getKineticEnergy(double cartVelocity) const;
+    double getPotentialEnergy() const;
     
     void setAngle(double angle) { m_angle = angle; }
     void setAngularVelocity(double vel) { m_angularVelocity = vel; }

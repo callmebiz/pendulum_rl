@@ -93,3 +93,25 @@ double SinglePendulum::normalizeAngle(double angle)
     while (angle < -PI) angle += 2.0 * PI;
     return angle;
 }
+
+double SinglePendulum::getKineticEnergy(double cartVelocity) const
+{
+    // Mass position: x = x_cart + L*sin(theta), y = -L*cos(theta)
+    // Velocities: x_dot = v_cart + L*cos(theta)*omega
+    //             y_dot = L*sin(theta)*omega
+    double v_cart = cartVelocity;
+    double omega = m_angularVelocity;
+    double theta = m_angle;
+
+    double xdot = v_cart + m_length * std::cos(theta) * omega;
+    double ydot = m_length * std::sin(theta) * omega;
+
+    return 0.5 * m_mass * (xdot * xdot + ydot * ydot);
+}
+
+double SinglePendulum::getPotentialEnergy() const
+{
+    // Use reference so that PE = 0 at the hanging-down configuration (theta=0)
+    // PE = m * g * L * (1 - cos(theta))
+    return m_mass * m_gravity * m_length * (1.0 - std::cos(m_angle));
+}

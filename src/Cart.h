@@ -38,6 +38,10 @@ public:
     // Reset to center
     void reset();
 
+    // Wrap-around behavior for rail: when enabled, cart wraps from one end to the other
+    void setWrapEnabled(bool enabled) { m_wrapEnabled = enabled; }
+    bool isWrapEnabled() const { return m_wrapEnabled; }
+
 private:
     double m_mass;        // Cart mass (kg)
     double m_position;    // Position along rail (m)
@@ -45,6 +49,7 @@ private:
     double m_railLength;  // Total rail length (m)
     double m_width = WIDTH;   // visual width (m)
     double m_height = HEIGHT; // visual height (m)
+    bool m_wrapEnabled = false;
 
     // Constants (defaults)
     static constexpr double WIDTH = 0.4;   // Default cart width (m) for rendering

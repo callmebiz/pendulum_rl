@@ -44,15 +44,23 @@ double Cart::update(double dt, double appliedAcceleration, double friction, doub
     // Clamp position to rail bounds
     double halfRail = m_railLength / 2.0;
     bool blocked = false;
-    if (m_position < -halfRail) {
-        m_position = -halfRail;
-        m_velocity = 0.0;
-        blocked = true;
+    if (m_wrapEnabled) {
+        // Wrap position into [-halfRail, halfRail]
+        while (m_position < -halfRail) m_position += m_railLength;
+        while (m_position > halfRail) m_position -= m_railLength;
+        // wrapping does not block
     }
-    if (m_position > halfRail) {
-        m_position = halfRail;
-        m_velocity = 0.0;
-        blocked = true;
+    else {
+        if (m_position < -halfRail) {
+            m_position = -halfRail;
+            m_velocity = 0.0;
+            blocked = true;
+        }
+        if (m_position > halfRail) {
+            m_position = halfRail;
+            m_velocity = 0.0;
+            blocked = true;
+        }
     }
 
     // If cart is blocked and the input acceleration is trying to push it
