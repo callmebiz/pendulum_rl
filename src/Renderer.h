@@ -47,6 +47,8 @@ private:
                  const glm::vec3& color, float thickness = 0.02f);
     void drawCircle(const glm::vec2& position, float radius, 
                    const glm::vec3& color);
+    void drawWheel(const glm::vec2& center, float radius, const glm::vec3& tireColor, const glm::vec3& rimColor);
+    void drawRail(const Cart& cart);
     
     void updateProjection();
     

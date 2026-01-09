@@ -55,14 +55,23 @@ void Renderer::render(const Cart& cart, const Pendulum& pendulum, bool isSingle)
     m_shader->setMat4("projection", m_projection);
 
     // Draw rail (horizontal line at y=0)
-    float halfRail = cart.getRailLength() / 2.0f;
-    drawLine(glm::vec2(-halfRail, 0.0f), glm::vec2(halfRail, 0.0f),
-        glm::vec3(0.3f, 0.3f, 0.3f), 0.03f);
+    // Draw stylized rail
+    drawRail(cart);
 
     // Draw cart - position it so it sits ON the rail
     glm::vec2 cartPos(cart.getPosition(), static_cast<float>(cart.getHeight() / 2.0));  // Center cart above rail
     glm::vec2 cartSize(static_cast<float>(cart.getWidth()), static_cast<float>(cart.getHeight()));
-    drawRectangle(cartPos, cartSize, glm::vec3(0.4f, 0.5f, 0.6f));
+
+    // Cart body
+    drawRectangle(cartPos, cartSize, glm::vec3(0.22f, 0.45f, 0.7f));
+    // Top panel
+    drawRectangle(cartPos + glm::vec2(0.0f, static_cast<float>(cart.getHeight()*0.15)), glm::vec2(cartSize.x * 0.9f, cartSize.y * 0.4f), glm::vec3(0.18f, 0.36f, 0.55f));
+
+    // Wheels (two wheels under the cart)
+    float wheelOffset = cartSize.x * 0.33f;
+    float wheelY = static_cast<float>(-cart.getHeight() / 2.0 + 0.0f); // wheels aligned slightly below cart center
+    drawWheel(cartPos + glm::vec2(-wheelOffset, wheelY), 0.08f, glm::vec3(0.05f,0.05f,0.05f), glm::vec3(0.6f,0.6f,0.6f));
+    drawWheel(cartPos + glm::vec2(wheelOffset, wheelY), 0.08f, glm::vec3(0.05f,0.05f,0.05f), glm::vec3(0.6f,0.6f,0.6f));
 
     // Draw pendulum(s)
     if (isSingle) {
@@ -83,10 +92,10 @@ void Renderer::render(const Cart& cart, const Pendulum& pendulum, bool isSingle)
             );
 
             // Draw rod
-            drawLine(pendulumStart, pendulumEnd, glm::vec3(0.8f, 0.7f, 0.2f), 0.02f);
-
-            // Draw mass
-            drawCircle(pendulumEnd, 0.08f, glm::vec3(0.9f, 0.8f, 0.3f));
+            drawLine(pendulumStart, pendulumEnd, glm::vec3(0.85f, 0.75f, 0.25f), 0.03f);
+            // Mass with rim
+            drawCircle(pendulumEnd, 0.10f, glm::vec3(0.95f, 0.85f, 0.35f));
+            drawCircle(pendulumEnd, 0.06f, glm::vec3(0.25f,0.18f,0.08f));
         }
     }
     else {
@@ -112,17 +121,44 @@ void Renderer::render(const Cart& cart, const Pendulum& pendulum, bool isSingle)
             );
 
             // Draw first rod (yellow)
-            drawLine(start, joint, glm::vec3(0.8f, 0.7f, 0.2f), 0.02f);
+            drawLine(start, joint, glm::vec3(0.85f,0.75f,0.25f), 0.03f);
+            drawCircle(joint, 0.10f, glm::vec3(0.95f,0.85f,0.35f));
+            drawCircle(joint, 0.06f, glm::vec3(0.25f,0.18f,0.08f));
 
-            // Draw first mass (yellow)
-            drawCircle(joint, 0.08f, glm::vec3(0.9f, 0.8f, 0.3f));
-
-            // Draw second rod (blue)
-            drawLine(joint, end, glm::vec3(0.2f, 0.5f, 0.9f), 0.02f);
-
-            // Draw second mass (blue)
-            drawCircle(end, 0.08f, glm::vec3(0.3f, 0.6f, 1.0f));
+            drawLine(joint, end, glm::vec3(0.22f,0.5f,0.92f), 0.03f);
+            drawCircle(end, 0.10f, glm::vec3(0.35f,0.68f,1.0f));
+            drawCircle(end, 0.06f, glm::vec3(0.08f,0.06f,0.03f));
         }
+    }
+}
+
+void Renderer::drawWheel(const glm::vec2& center, float radius, const glm::vec3& tireColor, const glm::vec3& rimColor)
+{
+    // Tire
+    drawCircle(center, radius, tireColor);
+    // Rim
+    drawCircle(center, radius * 0.6f, rimColor);
+    // Axle (small dark dot)
+    drawCircle(center, radius * 0.18f, glm::vec3(0.02f,0.02f,0.02f));
+    // Spoke: rotate based on horizontal position to simulate rolling
+    float angle = center.x / radius; // simple visual linkage: position -> rotation
+    glm::vec2 spokeEnd = center + glm::vec2(std::cos(angle), std::sin(angle)) * radius * 0.65f;
+    drawLine(center, spokeEnd, glm::vec3(0.1f,0.1f,0.1f), 0.015f);
+}
+
+void Renderer::drawRail(const Cart& cart)
+{
+    float halfRail = cart.getRailLength() / 2.0f;
+    // Base rail strip (dark)
+    drawLine(glm::vec2(-halfRail, 0.0f), glm::vec2(halfRail, 0.0f), glm::vec3(0.12f,0.12f,0.12f), 0.12f);
+    // Top shiny rail edge
+    drawLine(glm::vec2(-halfRail, 0.03f), glm::vec2(halfRail, 0.03f), glm::vec3(0.6f,0.6f,0.6f), 0.02f);
+
+    // Sleepers / ties
+    float spacing = 0.5f; // meters
+    for (float x = -halfRail; x <= halfRail; x += spacing) {
+        glm::vec2 tiePos(x, 0.0f);
+        drawRectangle(tiePos, glm::vec2(0.12f, 0.02f), glm::vec3(0.5f,0.35f,0.2f));
     }
 }
 
@@ -244,6 +280,7 @@ void Renderer::drawRectangle(const glm::vec2& position, const glm::vec2& size,
 
     m_shader->setMat4("model", model);
 
+    m_shader->setVec3("uColor", color);
     glBindVertexArray(m_rectangleVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
@@ -265,6 +302,7 @@ void Renderer::drawLine(const glm::vec2& start, const glm::vec2& end,
 
     m_shader->setMat4("model", model);
 
+    m_shader->setVec3("uColor", color);
     glBindVertexArray(m_rectangleVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
@@ -278,6 +316,7 @@ void Renderer::drawCircle(const glm::vec2& position, float radius,
 
     m_shader->setMat4("model", model);
 
+    m_shader->setVec3("uColor", color);
     glBindVertexArray(m_circleVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, CIRCLE_SEGMENTS + 2);
 }
