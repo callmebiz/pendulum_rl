@@ -181,15 +181,15 @@ int main()
         simulationTime += dt;
 
         // -----------------------------
-        // Energy instrumentation
+        // Energy instrumentation (store in millijoules)
         // -----------------------------
         double cartKE = 0.5 * cart.getMass() * cart.getVelocity() * cart.getVelocity();
         double pendKE = currentPendulum->getKineticEnergy(cart.getVelocity());
         double pendPE = currentPendulum->getPotentialEnergy();
         double totalEnergy = cartKE + pendKE + pendPE;
 
-        // Push into circular buffer
-        energyHistory[energyIndex] = static_cast<float>(totalEnergy);
+        // Push into circular buffer in millijoules (mJ)
+        energyHistory[energyIndex] = static_cast<float>(totalEnergy * 1000.0);
         energyIndex = (energyIndex + 1) % ENERGY_HISTORY_SIZE;
         if (energyCount < ENERGY_HISTORY_SIZE) ++energyCount;
 
@@ -218,9 +218,9 @@ int main()
                 ImGui::Text("Mode: %s Pendulum", useSinglePendulum ? "SINGLE" : "DOUBLE");
                 ImGui::Separator();
                 ImGui::Text("Cart:");
-                ImGui::Text("  Position: %.3f m", cart.getPosition());
-                ImGui::Text("  Velocity: %.3f m/s", cart.getVelocity());
-                ImGui::Text("  Acceleration: %.1f m/s^2", appliedAcceleration);
+                ImGui::Text("  Position: %.6f m", cart.getPosition());
+                ImGui::Text("  Velocity: %.6f m/s", cart.getVelocity());
+                ImGui::Text("  Acceleration: %.4f m/s^2", appliedAcceleration);
                 ImGui::Text("  Wrap: %s", cart.isWrapEnabled() ? "ON" : "OFF");
                 ImGui::Separator();
 
@@ -228,25 +228,25 @@ int main()
                     double angle = currentPendulum->getAngle(0);
                     double angVel = currentPendulum->getAngularVelocity(0);
                     ImGui::Text("Pendulum:");
-                    ImGui::Text("  Angle: %.6f deg", angle * 180.0 / 3.14159);
-                    ImGui::Text("  Ang Vel: %.6f deg/s", angVel * 180.0 / 3.14159);
+                    ImGui::Text("  Angle: %.9f deg", angle * 180.0 / 3.14159);
+                    ImGui::Text("  Ang Vel: %.9f deg/s", angVel * 180.0 / 3.14159);
                 }
                 else {
                     double angle1 = currentPendulum->getAngle(0);
                     double angle2 = currentPendulum->getAngle(1);
                     ImGui::Text("Pendulum 1 (yellow):");
-                    ImGui::Text("  Angle: %.6f deg", angle1 * 180.0 / 3.14159);
+                    ImGui::Text("  Angle: %.9f deg", angle1 * 180.0 / 3.14159);
                     ImGui::Text("Pendulum 2 (blue):");
-                    ImGui::Text("  Angle: %.6f deg", angle2 * 180.0 / 3.14159);
+                    ImGui::Text("  Angle: %.9f deg", angle2 * 180.0 / 3.14159);
                 }
 
                 ImGui::Separator();
-                // Energy display / plot
-                ImGui::Text("Energy (J):");
-                ImGui::Text("  Cart KE: %.6f", cartKE);
-                ImGui::Text("  Pend KE: %.6f", pendKE);
-                ImGui::Text("  Pend PE: %.6f", pendPE);
-                ImGui::Text("  Total : %.6f", totalEnergy);
+                // Energy display / plot (millijoules)
+                ImGui::Text("Energy (mJ):");
+                ImGui::Text("  Cart KE: %.9f", cartKE * 1000.0);
+                ImGui::Text("  Pend KE: %.9f", pendKE * 1000.0);
+                ImGui::Text("  Pend PE: %.9f", pendPE * 1000.0);
+                ImGui::Text("  Total : %.9f", totalEnergy * 1000.0);
 
                 // Prepare plot data (ordered oldest->newest)
                 if (energyCount > 0) {
@@ -256,7 +256,7 @@ int main()
                     for (int i = 0; i < energyCount; ++i) {
                         plotData.push_back(energyHistory[(start + i) % ENERGY_HISTORY_SIZE]);
                     }
-                    ImGui::PlotLines("Total Energy", plotData.data(), static_cast<int>(plotData.size()), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 80));
+                    ImGui::PlotLines("Total Energy (mJ)", plotData.data(), static_cast<int>(plotData.size()), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 80));
                 }
 
                 // (CSV export removed; plotting only)
@@ -339,50 +339,47 @@ int main()
                 }
 
                 ImGui::Separator();
-                // Single pendulum controls
-                float spMass = static_cast<float>(singlePendulum->getMass());
-                float spLength = static_cast<float>(singlePendulum->getLength());
-                float spInitDeg = static_cast<float>(singlePendulum->getInitialAngle() * 180.0 / 3.14159265358979323846);
-                if (ImGui::InputFloat("Single mass (kg)", &spMass, 0.01f, 0.1f, "%.3f")) {
-                    singlePendulum->setMass(static_cast<double>(spMass));
+                // Pendulum tuning - unified controls
+                ImGui::Text("Pendulum 1");
+                // Use doublePendulum's params as source-of-truth for pendulum 1 so they stay
+                // synchronized between single and double modes.
+                float p1Mass = static_cast<float>(doublePendulum->getMass(0));
+                float p1Length = static_cast<float>(doublePendulum->getLength(0));
+                float p1InitDeg = static_cast<float>(doublePendulum->getInitialAngle(0) * 180.0 / 3.14159265358979323846);
+                if (ImGui::InputFloat("Pendulum 1 mass (kg)", &p1Mass, 0.01f, 0.1f, "%.3f")) {
+                    singlePendulum->setMass(static_cast<double>(p1Mass));
+                    doublePendulum->setMass(0, static_cast<double>(p1Mass));
                 }
-                if (ImGui::InputFloat("Single length (m)", &spLength, 0.01f, 0.1f, "%.3f")) {
-                    singlePendulum->setLength(static_cast<double>(spLength));
+                if (ImGui::InputFloat("Pendulum 1 length (m)", &p1Length, 0.01f, 0.1f, "%.3f")) {
+                    singlePendulum->setLength(static_cast<double>(p1Length));
+                    doublePendulum->setLength(0, static_cast<double>(p1Length));
                 }
-                if (ImGui::InputFloat("Single initial angle (deg)", &spInitDeg, 0.1f, 1.0f, "%.2f")) {
-                    singlePendulum->setInitialAngle(static_cast<double>(spInitDeg) * 3.14159265358979323846 / 180.0);
-                    // also update current angle to match new initial on-the-fly
-                    singlePendulum->setAngle(static_cast<double>(spInitDeg) * 3.14159265358979323846 / 180.0);
+                if (ImGui::InputFloat("Pendulum 1 initial angle (deg)", &p1InitDeg, 0.1f, 1.0f, "%.2f")) {
+                    double initRad = static_cast<double>(p1InitDeg) * 3.14159265358979323846 / 180.0;
+                    singlePendulum->setInitialAngle(initRad);
+                    singlePendulum->setAngle(initRad);
+                    doublePendulum->setInitialAngle(0, initRad);
+                    doublePendulum->setAngle(0, initRad);
                 }
 
-                ImGui::Separator();
-
-                // Double pendulum controls
-                float dpM1 = static_cast<float>(doublePendulum->getMass(0));
-                float dpL1 = static_cast<float>(doublePendulum->getLength(0));
-                float dpM2 = static_cast<float>(doublePendulum->getMass(1));
-                float dpL2 = static_cast<float>(doublePendulum->getLength(1));
-                float dpInit1Deg = static_cast<float>(doublePendulum->getInitialAngle(0) * 180.0 / 3.14159265358979323846);
-                float dpInit2Deg = static_cast<float>(doublePendulum->getInitialAngle(1) * 180.0 / 3.14159265358979323846);
-                if (ImGui::InputFloat("Double mass1 (kg)", &dpM1, 0.01f, 0.1f, "%.3f")) {
-                    doublePendulum->setMass(0, static_cast<double>(dpM1));
-                }
-                if (ImGui::InputFloat("Double length1 (m)", &dpL1, 0.01f, 0.1f, "%.3f")) {
-                    doublePendulum->setLength(0, static_cast<double>(dpL1));
-                }
-                if (ImGui::InputFloat("Double mass2 (kg)", &dpM2, 0.01f, 0.1f, "%.3f")) {
-                    doublePendulum->setMass(1, static_cast<double>(dpM2));
-                }
-                if (ImGui::InputFloat("Double length2 (m)", &dpL2, 0.01f, 0.1f, "%.3f")) {
-                    doublePendulum->setLength(1, static_cast<double>(dpL2));
-                }
-                if (ImGui::InputFloat("Double initial angle 1 (deg)", &dpInit1Deg, 0.1f, 1.0f, "%.2f")) {
-                    doublePendulum->setInitialAngle(0, static_cast<double>(dpInit1Deg) * 3.14159265358979323846 / 180.0);
-                    doublePendulum->setAngle(0, static_cast<double>(dpInit1Deg) * 3.14159265358979323846 / 180.0);
-                }
-                if (ImGui::InputFloat("Double initial angle 2 (deg)", &dpInit2Deg, 0.1f, 1.0f, "%.2f")) {
-                    doublePendulum->setInitialAngle(1, static_cast<double>(dpInit2Deg) * 3.14159265358979323846 / 180.0);
-                    doublePendulum->setAngle(1, static_cast<double>(dpInit2Deg) * 3.14159265358979323846 / 180.0);
+                // If in double mode, show Pendulum 2 controls
+                if (!useSinglePendulum) {
+                    ImGui::Separator();
+                    ImGui::Text("Pendulum 2");
+                    float p2Mass = static_cast<float>(doublePendulum->getMass(1));
+                    float p2Length = static_cast<float>(doublePendulum->getLength(1));
+                    float p2InitDeg = static_cast<float>(doublePendulum->getInitialAngle(1) * 180.0 / 3.14159265358979323846);
+                    if (ImGui::InputFloat("Pendulum 2 mass (kg)", &p2Mass, 0.01f, 0.1f, "%.3f")) {
+                        doublePendulum->setMass(1, static_cast<double>(p2Mass));
+                    }
+                    if (ImGui::InputFloat("Pendulum 2 length (m)", &p2Length, 0.01f, 0.1f, "%.3f")) {
+                        doublePendulum->setLength(1, static_cast<double>(p2Length));
+                    }
+                    if (ImGui::InputFloat("Pendulum 2 initial angle (deg)", &p2InitDeg, 0.1f, 1.0f, "%.2f")) {
+                        double initRad2 = static_cast<double>(p2InitDeg) * 3.14159265358979323846 / 180.0;
+                        doublePendulum->setInitialAngle(1, initRad2);
+                        doublePendulum->setAngle(1, initRad2);
+                    }
                 }
 
                 ImGui::Separator();
