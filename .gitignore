@@ -1,0 +1,79 @@
+# Ignore build artifacts, editor files, OS junk and temporary files
+
+# CMake build output
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/*-Release*/
+
+# Generated compilation database
+/compile_commands.json
+
+# VS / Visual Studio
+*.sln
+*.vcxproj*
+*.vcxproj.user
+*.suo
+*.user
+.vs/
+
+# macOS
+.DS_Store
+
+# Windows thumbnail cache
+Thumbs.db
+
+# Binaries and libraries
+/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.app
+
+# Object files and build intermediates
+*.o
+*.obj
+*.lo
+*.la
+*.al
+*.pch
+
+# Static analyzers / coverage / profiling
+*.gcda
+*.gcno
+*.prof
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*~
+*.swp
+*.bak
+
+# IDEs
+.vscode/
+.idea/
+
+# Python artifacts (if any)
+__pycache__/
+*.pyc
+
+# External vendored source is kept in `external/` - but block common build subfolders
+external/**/build/
+external/**/bin/
+
+# Local CMake/Ninja output directory used by this project
+out/
+
+# Runtime copied assets (kept under source control), do NOT ignore assets/
+
+# User-specific files
+*.userprefs
+
+.github

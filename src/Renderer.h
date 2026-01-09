@@ -21,6 +21,8 @@ public:
     void initialize();
     void render(const Cart& cart, const Pendulum& pendulum, bool isSingle);
     void onWindowResize(int width, int height);
+    // Adjust view width to fit the given rail length (meters). Max cap applied.
+    void setViewWidthForRail(double railLength);
     
 private:
     int m_windowWidth;
@@ -28,6 +30,8 @@ private:
     
     glm::mat4 m_projection;
     Shader* m_shader;
+    // World view width in meters (controls zoom). Adjusted to fit rail length.
+    float m_viewWidth;
     
     unsigned int m_rectangleVAO, m_rectangleVBO;
     unsigned int m_lineVAO, m_lineVBO;

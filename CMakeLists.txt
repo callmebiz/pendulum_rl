@@ -16,9 +16,10 @@ add_subdirectory(external/glm)
 # Eigen is header-only
 set(EIGEN3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/eigen)
 
-# Build GLAD as a C library
+# Build GLAD as a library
 add_library(glad STATIC
     external/glad/src/glad.c
+    external/glad/include/glad/glad.h
 )
 target_include_directories(glad PUBLIC external/glad/include)
 
@@ -45,6 +46,7 @@ add_executable(PendulumML
     src/SinglePendulum.cpp
     src/DoublePendulum.cpp
     src/InputController.cpp
+    src/ODESolver.cpp
 )
 
 # Link libraries

@@ -21,10 +21,15 @@ public:
     
     void setAngle(double angle) { m_angle = angle; }
     void setAngularVelocity(double vel) { m_angularVelocity = vel; }
+    void setMass(double m) { m_mass = m; }
+    void setLength(double l) { m_length = l; }
+    void setInitialAngle(double angle) { m_initialAngle = angle; }
+    double getInitialAngle() const { return m_initialAngle; }
     
 private:
     double m_mass;
     double m_length;
+    double m_initialAngle;
     double m_angle;
     double m_angularVelocity;
     

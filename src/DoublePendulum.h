@@ -21,12 +21,23 @@ public:
     
     void setAngle(int index, double angle);
     void setAngularVelocity(int index, double vel);
+    void setInitialAngle(int index, double angle) {
+        if (index == 0) m_initialAngle1 = angle; else m_initialAngle2 = angle;
+    }
+    double getInitialAngle(int index) const { return (index == 0) ? m_initialAngle1 : m_initialAngle2; }
+    void setMass(int index, double m) {
+        if (index == 0) m_mass1 = m; else m_mass2 = m;
+    }
+    void setLength(int index, double l) {
+        if (index == 0) m_length1 = l; else m_length2 = l;
+    }
     
 private:
     double m_mass1, m_mass2;
     double m_length1, m_length2;
     double m_angle1, m_angle2;
     double m_angularVelocity1, m_angularVelocity2;
+    double m_initialAngle1, m_initialAngle2;
     
     void computeAngularAccelerations(double angle1, double angle2, 
                                     double angVel1, double angVel2,
